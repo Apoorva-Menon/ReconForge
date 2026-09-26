@@ -1,51 +1,113 @@
 # ReconForge
 
-Persistent reconciliation harness built with Google ADK, OpenAI, MongoDB Atlas, FastAPI, and React.
+ReconForge is a persistent reconciliation demo. Deterministic matching and evaluation identify recurring breaks; bounded agents can propose policy changes; fixed guardrails and a human decision control promotion.
 
 ## Architecture
 
 ```text
-Transactions -> deterministic matching -> bounded ADK workflow
-              -> diagnosis/evolution agents -> deterministic backtest
-              -> MongoDB checkpoint -> human approval -> resume/promote/replay
+Transaction and settlement data
+  -> deterministic reconciliation and live evaluation
+  -> diagnosis and policy proposal
+  -> historical backtest and fixed guardrails
+  -> human approval
+  -> promote, replay, and verify
 ```
 
-Tools measure and execute. Agents reason and orchestrate. MongoDB preserves state and experience. Evaluators judge candidates. Humans authorize policy changes. Only whitelisted reconciliation policy fields may evolve.
+MongoDB stores the source data, policies, workflow checkpoints, approvals, and audit history. Closing the browser does not stop or discard a persisted workflow.
 
-## Local setup
+## Requirements
 
-Requires Python 3.11+, `uv`, and Node.js 20+ with npm.
+- Python 3.11 or newer
+- [`uv`](https://docs.astral.sh/uv/)
+- Node.js 20 or newer with npm
+- MongoDB Atlas or another MongoDB deployment
+- `GEMINI_API_KEY` for workflows that call the diagnosis and evolution agents
+
+Dataset files are included in `ReconForge_Reconciliation_Dataset/`.
+
+## Configure
+
+From the repository root, create your local environment file:
 
 ```bash
 cp .env.example .env
-# Set GEMINI_API_KEY and MONGODB_URI in .env
+```
+
+Set `MONGODB_URI` and `MONGODB_DB` in `.env`. Set `GEMINI_API_KEY` to enable agent-powered upgrade workflows. Keep `.env` private; do not commit credentials.
+
+## Run locally
+
+Install the Python dependencies:
+
+```bash
 uv sync
 ```
 
-Start the API and React development server in separate terminals:
+In one terminal, start the API:
 
 ```bash
 uv run uvicorn app.api:app --reload
 ```
 
+In a second terminal, start the React development server:
+
 ```bash
-cd frontend && npm install && npm run dev
+cd frontend
+npm install
+npm run dev
 ```
 
-The React development UI runs at http://127.0.0.1:5173 and proxies API calls to the backend on port 8000. The API seeds the demo dataset on startup. To serve a built UI from FastAPI, run `cd frontend && npm run build`; then open http://127.0.0.1:8000.
+Open the local URL printed by Vite, usually http://127.0.0.1:5173. The Vite server proxies API requests to `http://127.0.0.1:8000`. On API startup, ReconForge loads the demo dataset and baseline policy into the configured database.
 
-If the dashboard reports that seed data is missing, check the API terminal for MongoDB or dataset path errors, then run `uv run python scripts/seed_demo.py` from the project root. The Overview page also provides a **Seed demo data** button when the baseline policy is missing.
+## Seed or repair demo data
 
-ADK discovery/playground entry point: `app.agent:root_agent`.
+If the dashboard says seed data is missing, first check the API terminal for MongoDB connection or dataset path errors. Then, from the repository root, run:
 
-## Environment
+```bash
+uv run python scripts/seed_demo.py
+```
 
-See [.env.example](.env.example). Do not commit credentials. Deterministic seeding and backtesting should work without calling an LLM.
+The script is safe to rerun: it inserts missing demo records and the baseline policy without clearing existing data. The Overview page also displays a **Seed demo data** button when the baseline policy is missing.
 
-## Demo
+## Build and serve the UI
 
-The intended flow is seed -> reconcile -> inject a recurring fee mismatch -> diagnose -> propose a bounded policy candidate -> backtest -> approve -> resume -> promote -> replay -> write episode memory. See [docs/demo_script.md](docs/demo_script.md).
+Build the React app:
 
-## Status
+```bash
+cd frontend
+npm install
+npm run build
+```
 
-The dashboard surfaces live workflow progress, approval decisions, reconciliation health, and deterministic backtest status and fixed guardrail parameters.
+Then start the API from the repository root and open http://127.0.0.1:8000. FastAPI serves the built frontend from `frontend/dist` when that directory exists.
+
+## Dashboard sections
+
+- **Overview:** stream health, evaluator metrics, upgrade trigger, workflow activity, and performance history.
+- **Backtesting:** current status, baseline-versus-candidate metrics, and the fixed backtest guardrails. Guardrails are read-only and cannot be changed by the agents.
+- **Patch evolution:** processor amount tolerance history and policy status.
+- **Human approval:** inspect eligible candidates and approve or reject a proposed change.
+- **Workflow:** execution stage, saved checkpoint, audit timeline, and persisted approval signals.
+- **Reconciliation:** match metrics, open break reasons, processor summary, and open cases.
+
+Backtest eligibility uses fixed safeguards: at least 1,000 records, false-match rate at or below 0.5%, false-match regression no greater than 0.1 percentage points, no high-value false matches, no regressions of previously correct matches, and at least a 3 percentage-point improvement in correct auto-resolution.
+
+## API
+
+FastAPI publishes interactive API documentation at http://127.0.0.1:8000/docs while the backend is running. Useful routes include:
+
+- `GET /health` — backend and configuration status
+- `GET /dashboard` — current dashboard data
+- `POST /demo/seed` — idempotently load the demo data
+- `POST /runs/start` — begin an agent workflow
+- `POST /runs/{run_id}/approval` — approve or reject a waiting candidate
+
+## Development
+
+Run the Python test suite with:
+
+```bash
+uv run pytest
+```
+
+ADK discovery entry point: `app.agent:root_agent`.
