@@ -4,9 +4,13 @@ from contextlib import asynccontextmanager, suppress
 import hmac
 import os
 import time
+from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from app.error_details import error_details
 from pydantic import BaseModel, Field
 
@@ -91,6 +95,8 @@ def create_api(settings=None, database=None, reasoners=None):
             raise HTTPException(401, "Invalid API token")
 
     api = FastAPI(title="ReconForge", version="0.1.0", lifespan=lifespan, dependencies=[Depends(auth)])
+    api.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+                       allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
     def database_ready():
         if api.state.db is None:
@@ -200,6 +206,18 @@ def create_api(settings=None, database=None, reasoners=None):
                 "decisions": decisions,
                 "current_evaluation": current_evaluation,
                 "cases": await db.reconciliation_cases.find({"status": {"$ne": "RESOLVED_AUTO"}}, {"_id": 0}).limit(200).to_list(None)}
+
+    frontend_dist = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+    if (frontend_dist / "assets").is_dir():
+        api.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="frontend-assets")
+
+        @api.get("/{frontend_path:path}", include_in_schema=False)
+        async def frontend_app(frontend_path: str):
+            root = frontend_dist.resolve()
+            file_path = (root / frontend_path).resolve()
+            if frontend_path and file_path.is_relative_to(root) and file_path.is_file():
+                return FileResponse(file_path)
+            return FileResponse(root / "index.html")
 
     return api
 
