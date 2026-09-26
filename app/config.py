@@ -1,32 +1,29 @@
-"""Environment configuration and startup validation."""
-
-from dataclasses import dataclass
+"""Configuration loads secrets without printing them."""
 import os
+from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @dataclass(frozen=True)
 class Settings:
-    openai_api_key: str | None
-    openai_model: str
-    mongodb_uri: str | None
-    mongodb_db: str
-    demo_seed: int
-    demo_dataset_size: int
-    require_human_approval: bool
-    enable_vector_search: bool
-    log_level: str
+    mongodb_uri: str = ""
+    mongodb_db: str = "reconforge"
+    model_name: str = "gemini-3.6-flash"
+    dataset_dir: Path = ROOT / "ReconForge_Reconciliation_Dataset"
+    api_token: str = ""
 
-
-def load_settings() -> Settings:
-    """Read the documented environment variables; validate secrets at app startup."""
-    return Settings(
-        openai_api_key=os.getenv("OPENAI_API_KEY"),
-        openai_model=os.getenv("OPENAI_MODEL", "openai/gpt-5.6-terra"),
-        mongodb_uri=os.getenv("MONGODB_URI"),
-        mongodb_db=os.getenv("MONGODB_DB", "reconforge"),
-        demo_seed=int(os.getenv("DEMO_SEED", "42")),
-        demo_dataset_size=int(os.getenv("DEMO_DATASET_SIZE", "5000")),
-        require_human_approval=os.getenv("REQUIRE_HUMAN_APPROVAL", "true").lower() == "true",
-        enable_vector_search=os.getenv("ENABLE_VECTOR_SEARCH", "false").lower() == "true",
-        log_level=os.getenv("LOG_LEVEL", "INFO"),
-    )
+    @classmethod
+    def from_env(cls):
+        load_dotenv(ROOT / ".env")
+        path = Path(os.getenv("DATASET_DIR", "ReconForge_Reconciliation_Dataset"))
+        return cls(
+            mongodb_uri=os.getenv("MONGODB_URI", ""),
+            mongodb_db=os.getenv("MONGODB_DB", "reconforge"),
+            model_name=os.getenv("GOOGLE_MODEL", "gemini-3.6-flash"),
+            dataset_dir=path if path.is_absolute() else ROOT / path,
+            api_token=os.getenv("RECONFORGE_API_TOKEN", ""),
+        )
