@@ -1,1 +1,1 @@
-"""Deterministic and governed ADK tools."""
+"""Deterministic business tools."""

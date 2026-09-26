@@ -1,1 +1,1 @@
-"""Public service functions used by the Streamlit demo."""
+"""Public service functions used by the ReconForge demo UI."""

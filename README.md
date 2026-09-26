@@ -1,6 +1,6 @@
 # ReconForge
 
-Persistent reconciliation harness built with Google ADK, OpenAI, MongoDB Atlas, and Streamlit.
+Persistent reconciliation harness built with Google ADK, OpenAI, MongoDB Atlas, FastAPI, and React.
 
 ## Architecture
 
@@ -14,15 +14,27 @@ Tools measure and execute. Agents reason and orchestrate. MongoDB preserves stat
 
 ## Local setup
 
-Requires Python 3.11+ and `uv`.
+Requires Python 3.11+, `uv`, and Node.js 20+ with npm.
 
 ```bash
 cp .env.example .env
-# Set OPENAI_API_KEY and MONGODB_URI in .env
+# Set GEMINI_API_KEY and MONGODB_URI in .env
 uv sync
-python scripts/seed_demo.py
-streamlit run ui/app.py
 ```
+
+Start the API and React development server in separate terminals:
+
+```bash
+uv run uvicorn app.api:app --reload
+```
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+The React development UI runs at http://127.0.0.1:5173 and proxies API calls to the backend on port 8000. The API seeds the demo dataset on startup. To serve a built UI from FastAPI, run `cd frontend && npm run build`; then open http://127.0.0.1:8000.
+
+If the dashboard reports that seed data is missing, check the API terminal for MongoDB or dataset path errors, then run `uv run python scripts/seed_demo.py` from the project root. The Overview page also provides a **Seed demo data** button when the baseline policy is missing.
 
 ADK discovery/playground entry point: `app.agent:root_agent`.
 
@@ -36,4 +48,4 @@ The intended flow is seed -> reconcile -> inject a recurring fee mismatch -> dia
 
 ## Status
 
-This repository currently contains a generated project skeleton. Application behavior and tests are not implemented yet.
+The dashboard surfaces live workflow progress, approval decisions, reconciliation health, and deterministic backtest status and fixed guardrail parameters.

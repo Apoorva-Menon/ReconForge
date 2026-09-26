@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "status": "active",
+  "matching": {
+    "amount_tolerance_cents": 0,
+    "date_tolerance_days": 0,
+    "normalize_reference": false,
+    "require_same_currency": true,
+    "require_same_customer": true
+  },
+  "guardrails": {
+    "max_false_match_rate": 0.005,
+    "min_backtest_records": 1000,
+    "require_human_approval": true
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "project": "ReconForge",
+  "seed": 6643,
+  "historical_base_pairs": 8000,
+  "live_base_pairs": 1500,
+  "purpose": "Synthetic reconciliation dataset for Google ADK + OpenAI + MongoDB.",
+  "live_phases": {
+    "baseline": "Rows 0-399",
+    "fee_drift": "Rows 400-999 (processor=PROC_B, fee_cents=3)",
+    "settlement_drift": "Rows 1000-1499 (processor=PROC_C, delay_days=1)"
+  },
+  "label_group_id_note": "label_group_id exists ONLY in the ground_truth files. It is never written into the ledger or processor_settlement records, so a matcher must resolve pairs from amount/date/reference/customer features rather than a shared key."
+}

@@ -1,1 +1,1 @@
-"""ReconForge application package."""
+"""ReconForge."""
