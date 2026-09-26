@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from google.adk.runners import Runner
 from google.genai import types
+from app.error_details import error_details
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
@@ -73,7 +74,9 @@ class Controller:
 
     async def start(self):
         async with engine_lease(self.db):
-            waiting = await self.db.workflow_runs.find_one({"status": {"$in": ["RUNNING", "WAITING_APPROVAL", "WAITING_FOR_DATA", "ERROR"]}})
+            # ERROR runs remain in history, but must not block a fresh run.
+            # Their ADK checkpoints may be incompatible with newer workflow code.
+            waiting = await self.db.workflow_runs.find_one({"status": {"$in": ["RUNNING", "WAITING_APPROVAL", "WAITING_FOR_DATA"]}})
             if waiting:
                 raise BusyError("Resume or resolve the existing workflow before starting another")
             return await self._start()
@@ -120,9 +123,10 @@ class Controller:
                         {"run_id": run_id, "approval_wait_started_at": {"$exists": False}},
                         {"$set": {"approval_wait_started_at": time.time()}})
         except Exception as exc:
-            # Store only exception type: provider errors can contain request/credential details.
+            details = error_details(exc)
             await self.db.workflow_runs.update_one({"run_id": run_id}, {"$set": {
-                "status": "ERROR", "error": type(exc).__name__, "updated_at": time.time()}})
+                "status": "ERROR", "error": details["type"], "error_details": details,
+                "updated_at": time.time()}})
             raise
 
     async def approve(self, run_id, decision, actor="demo-user"):
@@ -238,13 +242,11 @@ class Controller:
                     "min_signed_delta_concentration": INCIDENT_MIN_SIGNED_DELTA_CONCENTRATION,
                     "triggered": evolution_triggered,
                     "observed_clusters": incidents}}}, upsert=True)
-            waiting = await self.db.workflow_runs.find_one({"status": {"$in": ["RUNNING", "WAITING_APPROVAL", "WAITING_FOR_DATA", "ERROR"]}})
+            waiting = await self.db.workflow_runs.find_one({"status": {"$in": ["RUNNING", "WAITING_APPROVAL", "WAITING_FOR_DATA"]}})
             if waiting:
                 if waiting.get("evidence_requested") and cursor["position"] > waiting.get("evidence_requested_position", 0):
                     await self.db.workflow_runs.update_one({"run_id": waiting["run_id"]}, {"$set": {
                         "additional_evidence": {"position": cursor["position"], "summary": measured["summary"], "incidents": incidents}}})
-                if waiting["status"] == "ERROR":
-                    return {"status": "ERROR", "run_id": waiting["run_id"], "message": "Manual resume required"}
                 return await self._resume(waiting["run_id"])
             engine = await self.db.control.find_one({"_id": "engine"})
             if not (engine or {}).get("enabled"):

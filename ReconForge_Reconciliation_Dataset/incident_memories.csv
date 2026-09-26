@@ -1,0 +1,5 @@
+memory_id,pattern_summary,root_cause,successful_action,confidence,outcome,tags
+MEM-001,"Small processor-side amount differences of one to five cents with matching currency, merchant, and reference.",Known processor fee or rounding behavior.,"Evaluate a bounded amount_tolerance_cents up to 5, backtest before promotion.",0.93,historically successful,"amount,fee,rounding"
+MEM-002,Same amount and reference but settlement date arrives one day later.,T+1 settlement processing delay.,Evaluate date_tolerance_days=1 while requiring strong reference and amount agreement.,0.91,historically successful,"date,settlement,t+1"
+MEM-003,"Reference IDs differ only by punctuation, case, or a processor suffix.",Reference formatting transformation.,"Normalize case, punctuation, and known suffixes before comparison.",0.95,historically successful,"reference,normalization"
+MEM-004,Large amount differences or currency mismatch despite a similar identifier.,Potential true mismatch; unsafe to auto-reconcile.,Escalate and preserve as unmatched. Never widen tolerance enough to absorb large differences or currency changes.,0.99,safety guardrail,"guardrail,false-match,currency"

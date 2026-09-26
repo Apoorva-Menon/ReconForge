@@ -7,6 +7,7 @@ import time
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Header, Depends
+from app.error_details import error_details
 from pydantic import BaseModel, Field
 
 from app.config import Settings
@@ -69,10 +70,12 @@ def create_api(settings=None, database=None, reasoners=None):
                     # Concurrent stream/evaluator work can hold a lease briefly.
                     if "Another stream batch" not in str(exc):
                         await db.control.update_one({"_id": "engine"}, {"$set": {
-                            "last_error": type(exc).__name__, "last_error_at": time.time()}}, upsert=True)
+                            "last_error": type(exc).__name__, "last_error_details": error_details(exc),
+                            "last_error_at": time.time()}}, upsert=True)
                 except Exception as exc:
                     await db.control.update_one({"_id": "engine"}, {"$set": {
-                        "last_error": type(exc).__name__, "last_error_at": time.time()}}, upsert=True)
+                        "last_error": type(exc).__name__, "last_error_details": error_details(exc),
+                        "last_error_at": time.time()}}, upsert=True)
         task = asyncio.create_task(scheduler())
         try:
             yield

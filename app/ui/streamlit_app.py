@@ -259,7 +259,18 @@ def approval_content():
             if latest.get("reason"):
                 st.warning(f"Workflow did not request approval: {latest['reason']}")
             if latest.get("error"):
-                st.error(f"Workflow stopped with {latest['error']}. The run is saved in MongoDB.")
+                details = latest.get("error_details") or {}
+                status = details.get("status_code")
+                suffix = f" (HTTP {status})" if status else ""
+                message = details.get("message")
+                st.error(f"Workflow stopped with {latest['error']}{suffix}. The run is saved in MongoDB." +
+                         (f" Details: {message}" if message else ""))
+                if latest.get("status") == "ERROR":
+                    if not message:
+                        st.caption("This saved error has no provider details.")
+                    st.caption("This checkpoint failed during replay. Start a fresh workflow to try again; the failed run will remain in history.")
+                    action("Start fresh workflow", "/runs/start", {},
+                           key=f"start-fresh-{latest['run_id']}", kind="primary")
             if latest.get("status") == "WAITING_FOR_DATA":
                 st.info("The workflow is saved and waiting for more incoming records before proposing a patch.")
             elif latest.get("status") == "RUNNING":
@@ -270,7 +281,14 @@ def approval_content():
                 st.warning("The approved patch failed its held-out check and was rolled back.")
 
         if data["engine"].get("last_error"):
-            st.error(f"Evaluator / stream error: {data['engine']['last_error']}")
+            details = data["engine"].get("last_error_details") or {}
+            description = details.get("message")
+            status = details.get("status_code")
+            suffix = f" (HTTP {status})" if status else ""
+            st.error(f"Evaluator / stream error: {data['engine']['last_error']}{suffix}" +
+                     (f" — {description}" if description else ""))
+            if not description:
+                st.caption("This is an older saved error without details. A new evaluator failure after the API restart will include them here.")
 
         if threshold.get("triggered"):
             st.caption("An evaluator accuracy or repeated-incident trigger was met. Check the latest workflow status above for agent or backtest progress.")

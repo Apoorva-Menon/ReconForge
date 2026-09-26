@@ -14,7 +14,28 @@ from app.workflow.nodes import Operations
 def as_dict(value):
     if hasattr(value, "model_dump"):
         return value.model_dump(mode="json")
-    return json.loads(value) if isinstance(value, str) else value
+    if not isinstance(value, str):
+        return value
+
+    text = value.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1]
+        if text.endswith("```"):
+            text = text[:-3].strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as original_error:
+        # Models sometimes wrap their JSON in a short sentence despite the
+        # instruction. Recover only a complete object; schema validation below
+        # remains the authority for whether its contents are acceptable.
+        start, end = text.find("{"), text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                return json.loads(text[start:end + 1])
+            except json.JSONDecodeError:
+                pass
+        preview = " ".join(text.split())[:240] or "(empty response)"
+        raise ValueError(f"Agent response did not contain valid JSON. Response begins: {preview}") from original_error
 
 
 def create_app(repo, model_name, reasoners=None):
