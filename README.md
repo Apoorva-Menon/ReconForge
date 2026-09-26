@@ -2,20 +2,29 @@
 
 ReconForge is a persistent reconciliation demo. Deterministic matching and evaluation identify recurring breaks; bounded agents can propose policy changes; fixed guardrails and a human decision control promotion.
 
-Checkout our demo here: https://drive.google.com/file/d/1qeRYCI3H9UTcMZwWcujwjt64Nk5U12nX/view?usp=sharing!
+## High-Level Architecture
 
-## Architecture
+![High-Level Architecture](images/high-level-architecture.png)
 
-```text
-Transaction and settlement data
-  -> deterministic reconciliation and live evaluation
-  -> diagnosis and policy proposal
-  -> historical backtest and fixed guardrails
-  -> human approval
-  -> promote, replay, and verify
-```
+The diagram gives a high-level view of the API, workflow, deterministic tools, and MongoDB persistence. The frontend has since migrated from Streamlit to React: Vite serves it during development, and FastAPI can serve the production build.
 
-MongoDB stores the source data, policies, workflow checkpoints, approvals, and audit history. Closing the browser does not stop or discard a persisted workflow.
+## End-to-End Architecture
+
+![End-to-End Architecture](images/end-to-end-architecture.png)
+
+Transactions move through deterministic reconciliation, agent diagnosis and evolution, independent evaluation, and human approval. MongoDB stores business data, policy versions, checkpoints, evaluations, and approvals.
+
+## End-to-End Workflow
+
+![End-to-End Workflow](images/end-to-end-workflow.png)
+
+The workflow can pause at human approval and resume from its persisted checkpoint when a decision arrives. After promotion, the candidate is replayed against open cases and monitored.
+
+## Bounded Self-Evolution
+
+![Bounded Self-Evolution](images/bounded-self-evolution.png)
+
+Agents can propose changes only within the approved policy surface. Deterministic backtesting and fixed guardrails evaluate each candidate, and a human must approve it before promotion.
 
 ## Requirements
 
